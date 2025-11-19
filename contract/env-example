@@ -1,0 +1,3 @@
+TESTNET=true
+WALLET_MNEMONIC="your word1 word2 word3 ... word24"
+WALLET_VERSION=v4r2 or v5r1
