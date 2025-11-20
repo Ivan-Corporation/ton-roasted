@@ -12,27 +12,26 @@ export const RoastInterface: React.FC = () => {
   const [contractRoastCount, setContractRoastCount] = useState<number>(0);
   const [initialId, setInitialId] = useState<number>(0);
 
-  // Load initial data ONCE when component mounts
-  useEffect(() => {
-    const loadInitialData = async () => {
-      try {
-        // Get both values at once, who cares if it's slightly slower
-        const [count, id] = await Promise.all([
-          getRoastCount(),
-          getInitialId()
-        ]);
-        setContractRoastCount(count);
-        setInitialId(id);
-      } catch (error) {
-        console.error('Failed to load initial data:', error);
-        // Just use defaults, nobody will notice
-        setContractRoastCount(0);
-        setInitialId(0);
-      }
-    };
+useEffect(() => {
+  const loadInitialData = async () => {
+    try {
+      // Get both values at once - with API key, this should work fine
+      const [count, id] = await Promise.all([
+        getRoastCount(),
+        getInitialId()
+      ]);
+      setContractRoastCount(count);
+      setInitialId(id);
+    } catch (error) {
+      console.error('Failed to load initial data:', error);
+      // Just use defaults
+      setContractRoastCount(0);
+      setInitialId(0);
+    }
+  };
 
-    loadInitialData();
-  }, []); // Empty dependency array - run ONLY once
+  loadInitialData();
+}, []);
 
   const handleGetRoast = async () => {
     if (!wallet) {

@@ -2,6 +2,7 @@ import { Cell } from "@ton/core";
 
 // TON Center HTTP API helper
 const TONCENTER_API = 'https://testnet.toncenter.com/api/v2';
+const API_KEY = '62314637f463b355ebc7d20a0ee2434913dc946206cc0e0fa98b42b8c083a6b9';
 
 // Function to call contract get methods
 const callGetMethod = async (method: string, args: any[] = []) => {
@@ -10,6 +11,7 @@ const callGetMethod = async (method: string, args: any[] = []) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'X-API-Key': API_KEY,
       },
       body: JSON.stringify({
         address: 'EQBHepjXOn0hOuprJj7EUkZMnVaa0LX962HxBWmX08VwW7qb',
@@ -49,15 +51,12 @@ const parseStackNumber = (stackItem: any[]): number => {
 };
 
 // Parse stack value to string
-// Enhanced stack value parser with debugging
 const parseStackString = (stackItem: any[]): string => {
   if (!stackItem || stackItem.length < 2) {
-    console.log('Invalid stack item:', stackItem);
     return 'Invalid response from contract';
   }
   
   const [type, value] = stackItem;
-  console.log(`Parsing string - type: ${type}, value:`, value);
   
   // Handle different TON stack types
   switch (type) {
@@ -67,8 +66,6 @@ const parseStackString = (stackItem: any[]): string => {
     case 'int':
     case 'num':
       const index = parseInt(value, 10);
-      console.log(`Numeric index received: ${index}`);
-      
       const roasts = [
         "You're the reason we need warning labels.",
         "You bring everyone so much joy... when you leave the room.",
@@ -89,58 +86,44 @@ const parseStackString = (stackItem: any[]): string => {
       }
       
     case 'cell':
-      // For cell types, we need to parse the cell data
-      console.log('Cell data received, attempting to parse...');
+      // For cell types, parse the cell data
       try {
         if (value.bytes) {
-          // Parse the cell from bytes
           const cell = Cell.fromBoc(Buffer.from(value.bytes, 'base64'))[0];
-          console.log('Parsed cell:', cell);
+          const slice = cell.beginParse();
           
           // Try to read as string from the cell
-          const slice = cell.beginParse();
           try {
-            // Try to read as string (Tact usually stores strings this way)
             const roastText = slice.loadStringTail();
-            console.log('Decoded roast from cell:', roastText);
             return roastText;
           } catch (stringError) {
-            console.log('Failed to read as string, trying other methods:', stringError);
-            
-            // Try to read as reference if main cell is empty
+            // Try to read from reference cells if main cell is empty
             if (cell.refs.length > 0) {
               const refCell = cell.refs[0];
               const refSlice = refCell.beginParse();
               try {
                 const roastText = refSlice.loadStringTail();
-                console.log('Decoded roast from ref cell:', roastText);
                 return roastText;
               } catch (refError) {
-                console.log('Failed to read ref cell:', refError);
+                // If all else fails, return generic message
+                return "Error reading roast data";
               }
             }
-            
-            // If all else fails, return the raw bytes for debugging
-            return `Cell data: ${value.bytes.substring(0, 50)}...`;
+            return "Error reading roast data";
           }
         } else {
-          return "Cell data without bytes field";
+          return "Invalid cell data";
         }
       } catch (cellError) {
         console.error('Error parsing cell:', cellError);
         return "Error parsing cell data";
       }
       
-    case 'slice':
-      console.log('Slice data received:', value);
-      return "Roast data in slice format";
-      
     case 'null':
       return "No roast available";
       
     default:
-      console.log('Unknown stack type:', type, 'value:', value);
-      return `Unknown response type: ${type}`;
+      return "Unknown response type from contract";
   }
 };
 
@@ -164,18 +147,10 @@ export const getRandomRoast = async (): Promise<string> => {
   try {
     const result = await callGetMethod('getRandomRoast');
     
-    console.log('Raw contract response for getRandomRoast:', result);
-    
     if (result.stack && result.stack.length > 0) {
-      console.log('Stack items:', result.stack);
-      
-      // Try different parsing approaches
-      const roast = parseStackString(result.stack[0]);
-      console.log('Parsed roast:', roast);
-      
-      return roast;
+      return parseStackString(result.stack[0]);
     }
-    return "No roast available from contract";
+    return "No roast available";
   } catch (error) {
     console.error('Error getting random roast:', error);
     return "Failed to get roast from contract";
@@ -213,4 +188,3 @@ export const getInitialId = async (): Promise<number> => {
     return 0;
   }
 };
-
